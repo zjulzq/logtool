@@ -1,8 +1,10 @@
 package cn.ctp.task;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.List;
 import java.util.Set;
 
@@ -40,11 +42,11 @@ public class RestoreLogTask {
 	}
 
 	private void loadMapFile() {
-		try (BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(mapFile)))) {
+		try (BufferedReader reader = new BufferedReader(new FileReader(new File(mapFile)))) {
 			String line = null;
 			String latestClassName = null;
 			Splitter splitter = Splitter.on("->").trimResults();
-			while ((line = bufferedReader.readLine()) != null) {
+			while ((line = reader.readLine()) != null) {
 				if (isClassNameMap(line)) {
 					line = line.replaceAll(COLON, StringUtils.EMPTY);
 					List<String> list = splitter.splitToList(line);
@@ -82,6 +84,24 @@ public class RestoreLogTask {
 	}
 
 	private void restoreLogFile() {
-
+		int lastIndex = logFile.lastIndexOf(".");
+		String newLogFile = logFile.substring(0, lastIndex) + "-restore" + logFile.substring(lastIndex);
+		try (BufferedReader reader = new BufferedReader(new FileReader(new File(logFile)));
+				BufferedWriter writer = new BufferedWriter(new FileWriter(new File(newLogFile)))) {
+			String line = null;
+			Set<String> badNames = classnames.values();
+			BiMap<String, String> bad2good = classnames.inverse();
+			while ((line = reader.readLine()) != null) {
+				for (String badName : badNames) {
+					if (line.contains(badName)) {
+						line = line.replace(badName, bad2good.get(badName));
+						break;
+					}
+				}
+				writer.write(line + "\n");
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 }
